@@ -2,12 +2,11 @@
 
 /**
  *  Licensed to the Apache Software Foundation (ASF) under one
- *  or more contributor license agreements.  See the NOTICE file
- *  distributed with this work for additional information
- *  regarding copyright ownership.  The ASF licenses this file
- *  to you under the Apache License, Version 2.0 (the
- *  "License"); you may not use this file except in compliance
- *  with the License.  You may obtain a copy of the License at
+ *  or more contributor license agreements.  See the NOTICE file distributed
+ *  with this work for additional information regarding copyright ownership.
+ *  The ASF licenses this file to you under the Apache License, Version 2.0
+ *  (the "License"); you may not use this file except in compliance with the
+ *  License.  You may obtain a copy of the License at
  *
  *  https://www.apache.org/licenses/LICENSE-2.0
  *
@@ -19,8 +18,6 @@
  *
  */
 
-'use strict';
-
 /**
  * Shim entry point used when `avro` is `require`d from browserify.
  *
@@ -28,10 +25,10 @@
  *
  */
 
-var Tap = require('../../lib/utils').Tap,
-    schemas = require('../../lib/schemas'),
-    deprecated = require('../deprecated/validator'),
-    Buffer = require('buffer').Buffer
+import { Tap } from '../../lib/utils.js';
+import * as schemas from '../../lib/schemas.js';
+import * as deprecated from '../deprecated/validator.js';
+import { Buffer } from 'buffer';
 
 
 function parse(schema, opts) {
@@ -83,10 +80,16 @@ Tap.prototype.writeBinary = function (s, len) {
   this.buf.write(s, pos, len, 'binary');
 };
 
-
-module.exports = {
-  parse: parse,
+const exported = {
+  parse,
   types: schemas.types,
   Validator: deprecated.Validator,
   ProtocolValidator: deprecated.ProtocolValidator
 };
+
+export const types = schemas.types;
+export const Validator = deprecated.Validator;
+export const ProtocolValidator = deprecated.ProtocolValidator;
+export { parse };
+
+export default exported;

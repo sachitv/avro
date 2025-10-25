@@ -2,12 +2,11 @@
 
 /**
  *  Licensed to the Apache Software Foundation (ASF) under one
- *  or more contributor license agreements.  See the NOTICE file
- *  distributed with this work for additional information
- *  regarding copyright ownership.  The ASF licenses this file
- *  to you under the Apache License, Version 2.0 (the
- *  "License"); you may not use this file except in compliance
- *  with the License.  You may obtain a copy of the License at
+ *  or more contributor license agreements.  See the NOTICE file distributed
+ *  with this work for additional information regarding copyright ownership.
+ *  The ASF licenses this file to you under the Apache License, Version 2.0
+ *  (the "License"); you may not use this file except in compliance with the
+ *  License.  You may obtain a copy of the License at
  *
  *  https://www.apache.org/licenses/LICENSE-2.0
  *
@@ -19,16 +18,14 @@
  *
  */
 
-'use strict';
-
-var protocols = require('./protocols'),
-    schemas = require('./schemas'),
-    utils = require('./utils'),
-    fs = require('fs'),
-    stream = require('stream'),
-    util = require('util'),
-    path = require('path'),
-    zlib = require('zlib');
+import * as protocols from './protocols.js';
+import * as schemas from './schemas.js';
+import * as utils from './utils.js';
+import fs from 'node:fs';
+import stream from 'node:stream';
+import util from 'node:util';
+import path from 'node:path';
+import zlib from 'node:zlib';
 
 // Type of Avro header.
 var HEADER_TYPE = schemas.createType({
@@ -660,17 +657,31 @@ function loadSchema(schema) {
 }
 
 
-module.exports = {
-  HEADER_TYPE: HEADER_TYPE, // For tests.
-  MAGIC_BYTES: MAGIC_BYTES, // Idem.
-  parse: parse,
-  createFileDecoder: createFileDecoder,
-  createFileEncoder: createFileEncoder,
-  extractFileHeader: extractFileHeader,
-  streams: {
-    RawDecoder: RawDecoder,
-    BlockDecoder: BlockDecoder,
-    RawEncoder: RawEncoder,
-    BlockEncoder: BlockEncoder
-  }
+const streamsNamespace = {
+  RawDecoder,
+  BlockDecoder,
+  RawEncoder,
+  BlockEncoder
 };
+
+const exported = {
+  HEADER_TYPE, // For tests.
+  MAGIC_BYTES, // Idem.
+  parse,
+  createFileDecoder,
+  createFileEncoder,
+  extractFileHeader,
+  streams: streamsNamespace
+};
+
+export {
+  HEADER_TYPE,
+  MAGIC_BYTES,
+  parse,
+  createFileDecoder,
+  createFileEncoder,
+  extractFileHeader,
+  streamsNamespace as streams
+};
+
+export default exported;

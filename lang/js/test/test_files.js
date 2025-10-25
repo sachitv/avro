@@ -19,15 +19,16 @@
  *
  */
 
-'use strict';
+import * as files from '../lib/files.js';
+import * as protocols from '../lib/protocols.js';
+import * as schemas from '../lib/schemas.js';
+import assert from 'node:assert';
+import fs from 'node:fs';
+import path from 'node:path';
+import tmp from 'tmp';
+import { fileURLToPath } from 'node:url';
 
-var files = require('../lib/files'),
-    protocols = require('../lib/protocols'),
-    schemas = require('../lib/schemas'),
-    assert = require('assert'),
-    fs = require('fs'),
-    path = require('path'),
-    tmp = require('tmp');
+const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
 var DPATH = path.join(__dirname, 'dat');
 var Header = files.HEADER_TYPE.getRecordConstructor();

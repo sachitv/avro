@@ -18,12 +18,9 @@
  *  limitations under the License.
  *
  */
-
-'use strict';
-
-var utils = require('./utils'),
-    buffer = require('buffer'), // For `SlowBuffer`.
-    util = require('util');
+import * as utils from './utils.js';
+import buffer from 'node:buffer'; // For `SlowBuffer`.
+import util from 'node:util';
 
 // Convenience imports.
 var Tap = utils.Tap;
@@ -2218,19 +2215,34 @@ function throwInvalidError(path, val, type) {
 }
 
 
-module.exports = {
-  createType: createType,
-  resolveNames: resolveNames, // Protocols use the same name resolution logic.
-  stringify: stringify,
-  types: (function () {
-    // Export the base types along with all concrete implementations.
-    var obj = {Type: Type, LogicalType: LogicalType};
-    var types = Object.keys(TYPES);
-    var i, l, Class;
-    for (i = 0, l = types.length; i < l; i++) {
-      Class = TYPES[types[i]];
-      obj[Class.name] = Class;
-    }
-    return obj;
-  })()
+const types = (function () {
+  // Export the base types along with all concrete implementations.
+  var obj = {Type: Type, LogicalType: LogicalType};
+  var typeNames = Object.keys(TYPES);
+  var i, l, Class;
+  for (i = 0, l = typeNames.length; i < l; i++) {
+    Class = TYPES[typeNames[i]];
+    obj[Class.name] = Class;
+  }
+  return obj;
+})();
+
+const exported = {
+  createType,
+  resolveNames, // Protocols use the same name resolution logic.
+  stringify,
+  types,
+  Type,
+  LogicalType
 };
+
+export {
+  createType,
+  resolveNames,
+  stringify,
+  types,
+  Type,
+  LogicalType
+};
+
+export default exported;

@@ -13,7 +13,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-module.exports = function(grunt) {
+export default function (grunt) {
 
   // Project configuration.
   grunt.initConfig({
@@ -54,4 +54,4 @@ module.exports = function(grunt) {
   grunt.registerTask('test', ['nodeunit']);
   grunt.registerTask('lint', ['jshint']);
 
-};
+}

@@ -19,12 +19,10 @@
  *
  */
 
-'use strict';
-
-var files = require('../lib/files'),
-   assert = require('assert'),
-       fs = require('fs'),
-     path = require('path');
+import * as files from '../lib/files.js';
+import assert from 'node:assert';
+import fs from 'node:fs';
+import path from 'node:path';
 
 describe('interop', function() {
 

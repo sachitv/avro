@@ -19,13 +19,11 @@
  *
  */
 
-'use strict';
-
-var protocols = require('../lib/protocols'),
-    utils = require('../lib/utils'),
-    assert = require('assert'),
-    stream = require('stream'),
-    util = require('util');
+import * as protocols from '../lib/protocols.js';
+import * as utils from '../lib/utils.js';
+import assert from 'node:assert';
+import stream from 'node:stream';
+import util from 'node:util';
 
 
 var HANDSHAKE_REQUEST_TYPE = protocols.HANDSHAKE_REQUEST_TYPE;

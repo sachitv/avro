@@ -19,9 +19,7 @@
  *
  */
 
-'use strict';
-
-var crypto = require('crypto');
+import crypto from 'node:crypto';
 
 
 /**
@@ -645,15 +643,15 @@ function invert(buf, len) {
 }
 
 
-module.exports = {
-  abstractFunction: abstractFunction,
-  capitalize: capitalize,
-  compare: compare,
-  getHash: getHash,
-  toMap: toMap,
-  singleIndexOf: singleIndexOf,
-  hasDuplicates: hasDuplicates,
-  Lcg: Lcg,
-  OrderedQueue: OrderedQueue,
-  Tap: Tap
+export {
+  abstractFunction,
+  capitalize,
+  compare,
+  getHash,
+  toMap,
+  singleIndexOf,
+  hasDuplicates,
+  Lcg,
+  OrderedQueue,
+  Tap
 };

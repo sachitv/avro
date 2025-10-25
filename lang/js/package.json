@@ -21,6 +21,7 @@
     "avro",
     "json"
   ],
+  "type": "module",
   "files": [
     "LICENSE",
     "NOTICE",
@@ -28,7 +29,13 @@
     "etc/browser",
     "etc/deprecated/validator.js"
   ],
-  "main": "./lib",
+  "main": "./lib/index.js",
+  "exports": {
+    ".": "./lib/index.js",
+    "./lib/*": "./lib/*.js",
+    "./etc/browser/*": "./etc/browser/*.js",
+    "./etc/deprecated/*": "./etc/deprecated/*.js"
+  },
   "browser": {
     "./lib": "./etc/browser/avro.js",
     "crypto": "./etc/browser/crypto.js"

@@ -4,10 +4,10 @@
  *  Licensed to the Apache Software Foundation (ASF) under one
  *  or more contributor license agreements.  See the NOTICE file
  *  distributed with this work for additional information
- *  regarding copyright ownership.  The ASF licenses this file
- *  to you under the Apache License, Version 2.0 (the
- *  "License"); you may not use this file except in compliance
- *  with the License.  You may obtain a copy of the License at
+ *  regarding copyright ownership.  The ASF licenses this file to you under the
+ *  Apache License, Version 2.0 (the "License"); you may not use this file
+ *  except in compliance with the License.  You may obtain a copy of the
+ *  License at
  *
  *  https://www.apache.org/licenses/LICENSE-2.0
  *
@@ -19,8 +19,6 @@
  *
  */
 
-'use strict';
-
 /**
  * This module implements Avro's IPC/RPC logic.
  *
@@ -28,11 +26,11 @@
  *
  */
 
-var schemas = require('./schemas'),
-    utils = require('./utils'),
-    events = require('events'),
-    stream = require('stream'),
-    util = require('util');
+import * as schemas from './schemas.js';
+import * as utils from './utils.js';
+import events from 'node:events';
+import stream from 'node:stream';
+import util from 'node:util';
 
 
 var BOOLEAN_TYPE = schemas.createType('boolean');
@@ -1261,24 +1259,45 @@ function isStream(any) {
 }
 
 
-module.exports = {
-  HANDSHAKE_REQUEST_TYPE: HANDSHAKE_REQUEST_TYPE,
-  HANDSHAKE_RESPONSE_TYPE: HANDSHAKE_RESPONSE_TYPE,
-  IdType: IdType,
-  Message: Message,
-  Protocol: Protocol,
-  createProtocol: createProtocol,
-  emitters: {
-    StatefulEmitter: StatefulEmitter,
-    StatelessEmitter: StatelessEmitter
-  },
-  listeners: {
-    StatefulListener: StatefulListener,
-    StatelessListener: StatelessListener
-  },
-  streams: {
-    MessageDecoder: MessageDecoder,
-    MessageEncoder: MessageEncoder
-  },
-  throwError: throwError
+const emitters = {
+  StatefulEmitter,
+  StatelessEmitter
 };
+
+const listeners = {
+  StatefulListener,
+  StatelessListener
+};
+
+const streamsNamespace = {
+  MessageDecoder,
+  MessageEncoder
+};
+
+const exported = {
+  HANDSHAKE_REQUEST_TYPE,
+  HANDSHAKE_RESPONSE_TYPE,
+  IdType,
+  Message,
+  Protocol,
+  createProtocol,
+  emitters,
+  listeners,
+  streams: streamsNamespace,
+  throwError
+};
+
+export {
+  HANDSHAKE_REQUEST_TYPE,
+  HANDSHAKE_RESPONSE_TYPE,
+  IdType,
+  Message,
+  Protocol,
+  createProtocol,
+  emitters,
+  listeners,
+  streamsNamespace as streams,
+  throwError
+};
+
+export default exported;

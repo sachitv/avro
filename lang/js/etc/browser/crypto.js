@@ -2,12 +2,11 @@
 
 /**
  *  Licensed to the Apache Software Foundation (ASF) under one
- *  or more contributor license agreements.  See the NOTICE file
- *  distributed with this work for additional information
- *  regarding copyright ownership.  The ASF licenses this file
- *  to you under the Apache License, Version 2.0 (the
- *  "License"); you may not use this file except in compliance
- *  with the License.  You may obtain a copy of the License at
+ *  or more contributor license agreements.  See the NOTICE file distributed
+ *  with this work for additional information regarding copyright ownership.
+ *  The ASF licenses this file to you under the Apache License, Version 2.0
+ *  (the "License"); you may not use this file except in compliance with the
+ *  License.  You may obtain a copy of the License at
  *
  *  https://www.apache.org/licenses/LICENSE-2.0
  *
@@ -19,18 +18,15 @@
  *
  */
 
-'use strict';
-
 /**
  * Shim to disable schema fingerprint computation.
  *
  */
 
-function createHash() {
+export function createHash() {
   throw new Error('fingerprinting not supported in the browser');
 }
 
+const exported = { createHash };
 
-module.exports = {
-  createHash: createHash
-};
+export default exported;

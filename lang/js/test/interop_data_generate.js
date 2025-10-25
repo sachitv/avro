@@ -19,10 +19,8 @@
  *
  */
 
-'use strict';
-
-var files = require('../lib/files'),
-       fs = require('fs');
+import * as files from '../lib/files.js';
+import fs from 'node:fs';
 
 var datum = {
     'intField': 12,

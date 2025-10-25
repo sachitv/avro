@@ -13,10 +13,10 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-var _ = require("underscore"),
-    util = require('util');
+import _ from 'underscore';
+import util from 'node:util';
 
-var WARNING = 'Validator API is deprecated. Please use the type API instead.';
+const WARNING = 'Validator API is deprecated. Please use the type API instead.';
 Validator = util.deprecate(Validator, WARNING);
 ProtocolValidator = util.deprecate(ProtocolValidator, WARNING);
 
@@ -445,7 +445,11 @@ ProtocolValidator.validate = function(protocol, typeName, obj) {
   return (new ProtocolValidator(protocol)).validate(typeName, obj);
 };
 
-if (typeof exports !== 'undefined') {
-  exports['Validator'] = Validator;
-  exports['ProtocolValidator'] = ProtocolValidator;
-}
+const exported = {
+  Validator,
+  ProtocolValidator
+};
+
+export { Validator, ProtocolValidator };
+
+export default exported;
