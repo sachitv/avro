@@ -25,11 +25,14 @@ import * as schemas from '../lib/schemas.js';
 import assert from 'assert';
 import fs from 'fs';
 import path from 'path';
+import nodeStream from 'stream';
+import { Blob as NodeBlob } from 'buffer';
 import { fileURLToPath } from 'url';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
 var DPATH = path.join(__dirname, 'dat');
+const BlobCtor = typeof globalThis.Blob === 'undefined' ? NodeBlob : globalThis.Blob;
 var Header = files.HEADER_TYPE.getRecordConstructor();
 var MAGIC_BYTES = files.MAGIC_BYTES;
 var SYNC = Buffer.from('atokensyncheader');
@@ -603,6 +606,106 @@ describe('files', function () {
     var noCodecBuffer = fs.readFileSync(path.join(DPATH, 'person-10.no-codec.avro'));
     header = await files.extractFileHeader(noCodecBuffer);
     assert(header !== null);
+  });
+
+  describe('browser compatibility', function () {
+    it('createFileDecoder accepts ArrayBuffer sources', async function () {
+      var buffer = fs.readFileSync(path.join(DPATH, 'person-10.avro'));
+      var arrayBuffer = buffer.buffer.slice(buffer.byteOffset, buffer.byteOffset + buffer.byteLength);
+      var type = loadSchema(path.join(DPATH, 'Person.avsc'));
+      var count = 0;
+      await new Promise(function (resolve, reject) {
+        files.createFileDecoder(arrayBuffer)
+          .on('data', function (obj) {
+            count++;
+            assert(type.isValid(obj));
+          })
+          .on('end', function () {
+            assert(count > 0);
+            resolve();
+          })
+          .on('error', reject);
+      });
+    });
+
+    it('createFileDecoder accepts Blob sources', async function () {
+      var buffer = fs.readFileSync(path.join(DPATH, 'person-10.avro'));
+      var blob = new BlobCtor([buffer]);
+      var type = loadSchema(path.join(DPATH, 'Person.avsc'));
+      var count = 0;
+      await new Promise(function (resolve, reject) {
+        files.createFileDecoder(blob)
+          .on('data', function (obj) {
+            count++;
+            assert(type.isValid(obj));
+          })
+          .on('end', function () {
+            assert(count > 0);
+            resolve();
+          })
+          .on('error', reject);
+      });
+    });
+
+    it('createFileDecoder accepts ReadableStream sources', async function () {
+      if (typeof ReadableStream === 'undefined' || !nodeStream.Readable || typeof nodeStream.Readable.fromWeb !== 'function') {
+        this.skip();
+        return;
+      }
+      var buffer = fs.readFileSync(path.join(DPATH, 'person-10.avro'));
+      var type = loadSchema(path.join(DPATH, 'Person.avsc'));
+      var source = new ReadableStream({
+        start: function (controller) {
+          controller.enqueue(buffer);
+          controller.close();
+        }
+      });
+      var count = 0;
+      await new Promise(function (resolve, reject) {
+        files.createFileDecoder(source)
+          .on('data', function (obj) {
+            count++;
+            assert(type.isValid(obj));
+          })
+          .on('end', function () {
+            assert(count > 0);
+            resolve();
+          })
+          .on('error', reject);
+      });
+    });
+
+    it('createFileEncoder can emit Blob payloads', async function () {
+      var type = createType({
+        type: 'record',
+        name: 'BlobPerson',
+        fields: [
+          {name: 'name', type: 'string'},
+          {name: 'age', type: 'int'}
+        ]
+      });
+      var encoder = files.createFileEncoder(type, {codec: 'deflate', blobType: 'application/avro'});
+      encoder.write({name: 'Ann', age: 32});
+      encoder.end({name: 'Bob', age: 33});
+      var blob = await encoder.toBlob();
+      assert(blob instanceof BlobCtor);
+      assert.strictEqual(blob.type, 'application/avro');
+
+      var payload = Buffer.from(await blob.arrayBuffer());
+      var count = 0;
+      await new Promise(function (resolve, reject) {
+        files.createFileDecoder(payload)
+          .on('data', function (obj) {
+            count++;
+            assert(type.isValid(obj));
+          })
+          .on('end', function () {
+            assert.strictEqual(count, 2);
+            resolve();
+          })
+          .on('error', reject);
+      });
+    });
   });
 
 });
