@@ -19,12 +19,12 @@
  *
  */
 import * as utils from './utils.js';
-import buffer from 'node:buffer'; // For `SlowBuffer`.
-import util from 'node:util';
+import buffer from 'buffer'; // For `SlowBuffer`.
+import { format, inherits } from './util.js';
 
 // Convenience imports.
 var Tap = utils.Tap;
-var f = util.format;
+var f = format;
 var Buffer = buffer.Buffer;
 
 // All Avro types.
@@ -66,8 +66,8 @@ var LOGICAL_TYPE = null;
 /**
  * Schema parsing entry point.
  *
- * It isn't exposed directly but called from `parse` inside `index.js` (node)
- * or `avro.js` (browserify) which each add convenience functionality.
+ * It isn't exposed directly but called from `parse` inside the public entry point,
+ * which adds convenience functionality.
  *
  */
 function createType(attrs, opts) {
@@ -346,7 +346,7 @@ Type.prototype.random = utils.abstractFunction;
  *
  */
 function PrimitiveType() { Type.call(this); }
-util.inherits(PrimitiveType, Type);
+inherits(PrimitiveType, Type);
 PrimitiveType.prototype._updateResolver = function (resolver, type) {
   if (type.constructor === this.constructor) {
     resolver._read = this._read;
@@ -363,7 +363,7 @@ PrimitiveType.prototype.compare = utils.compare;
  *
  */
 function NullType() { PrimitiveType.call(this); }
-util.inherits(NullType, PrimitiveType);
+inherits(NullType, PrimitiveType);
 NullType.prototype._check = function (val, cb) {
   var b = val === null;
   if (!b && cb) {
@@ -388,7 +388,7 @@ NullType.prototype.toJSON = function () { return 'null'; };
  *
  */
 function BooleanType() { PrimitiveType.call(this); }
-util.inherits(BooleanType, PrimitiveType);
+inherits(BooleanType, PrimitiveType);
 BooleanType.prototype._check = function (val, cb) {
   var b = typeof val == 'boolean';
   if (!b && cb) {
@@ -415,7 +415,7 @@ BooleanType.prototype.toJSON = function () { return 'boolean'; };
  *
  */
 function IntType() { PrimitiveType.call(this); }
-util.inherits(IntType, PrimitiveType);
+inherits(IntType, PrimitiveType);
 IntType.prototype._check = function (val, cb) {
   var b = val === (val | 0);
   if (!b && cb) {
@@ -447,7 +447,7 @@ IntType.prototype.toJSON = function () { return 'int'; };
  *
  */
 function LongType() { PrimitiveType.call(this); }
-util.inherits(LongType, PrimitiveType);
+inherits(LongType, PrimitiveType);
 LongType.prototype._check = function (val, cb) {
   var b = typeof val == 'number' && val % 1 === 0 && isSafeLong(val);
   if (!b && cb) {
@@ -507,7 +507,7 @@ LongType.using = function (methods, noUnpack) {
  *
  */
 function FloatType() { PrimitiveType.call(this); }
-util.inherits(FloatType, PrimitiveType);
+inherits(FloatType, PrimitiveType);
 FloatType.prototype._check = function (val, cb) {
   var b = typeof val == 'number';
   if (!b && cb) {
@@ -543,7 +543,7 @@ FloatType.prototype.toJSON = function () { return 'float'; };
  *
  */
 function DoubleType() { PrimitiveType.call(this); }
-util.inherits(DoubleType, PrimitiveType);
+inherits(DoubleType, PrimitiveType);
 DoubleType.prototype._check = function (val, cb) {
   var b = typeof val == 'number';
   if (!b && cb) {
@@ -580,7 +580,7 @@ DoubleType.prototype.toJSON = function () { return 'double'; };
  *
  */
 function StringType() { PrimitiveType.call(this); }
-util.inherits(StringType, PrimitiveType);
+inherits(StringType, PrimitiveType);
 StringType.prototype._check = function (val, cb) {
   var b = typeof val == 'string';
   if (!b && cb) {
@@ -620,7 +620,7 @@ StringType.prototype.toJSON = function () { return 'string'; };
  *
  */
 function BytesType() { PrimitiveType.call(this); }
-util.inherits(BytesType, PrimitiveType);
+inherits(BytesType, PrimitiveType);
 BytesType.prototype._check = function (val, cb) {
   var b = Buffer.isBuffer(val);
   if (!b && cb) {
@@ -738,7 +738,7 @@ function UnionType(attrs, opts) {
     return new Function('val', body);
   });
 }
-util.inherits(UnionType, Type);
+inherits(UnionType, Type);
 
 UnionType.prototype._check = function (val, cb) {
   var b = false;
@@ -953,7 +953,7 @@ function EnumType(attrs, opts) {
     this._indices[symbol] = i;
   }, this);
 }
-util.inherits(EnumType, Type);
+inherits(EnumType, Type);
 
 EnumType.prototype._check = function (val, cb) {
   var b = this._indices[val] !== undefined;
@@ -1037,7 +1037,7 @@ function FixedType(attrs, opts) {
   this._aliases = resolutions.aliases;
   Type.call(this, opts.registry);
 }
-util.inherits(FixedType, Type);
+inherits(FixedType, Type);
 
 FixedType.prototype._check = function (val, cb) {
   var b = Buffer.isBuffer(val) && val.length === this._size;
@@ -1108,7 +1108,7 @@ function MapType(attrs, opts) {
   Type.call(this);
   this._values = createType(attrs.values, opts);
 }
-util.inherits(MapType, Type);
+inherits(MapType, Type);
 
 MapType.prototype.getValuesType = function () { return this._values; };
 
@@ -1250,7 +1250,7 @@ function ArrayType(attrs, opts) {
   this._items = createType(attrs.items, opts);
   Type.call(this);
 }
-util.inherits(ArrayType, Type);
+inherits(ArrayType, Type);
 
 ArrayType.prototype._check = function (val, cb) {
   if (!(val instanceof Array)) {
@@ -1434,7 +1434,7 @@ function RecordType(attrs, opts) {
   this._write = this._createWriter();
   this._check = this._createChecker();
 }
-util.inherits(RecordType, Type);
+inherits(RecordType, Type);
 
 RecordType.prototype._createConstructor = function (isError) {
   // jshint -W054
@@ -1480,7 +1480,7 @@ RecordType.prototype._createConstructor = function (isError) {
   // because it is an invalid property name in Avro but not in JavaScript.
   // (This way we are guaranteed not to be stepped over!)
   if (isError) {
-    util.inherits(Record, Error);
+    inherits(Record, Error);
     // Not setting the name on the prototype to be consistent with how object
     // fields are mapped to (only if defined in the schema as a field).
   }
@@ -1773,7 +1773,7 @@ function LogicalType(attrs, opts, Types) {
     throw new Error(f('invalid underlying type for %s: %s', lType, uType));
   }
 }
-util.inherits(LogicalType, Type);
+inherits(LogicalType, Type);
 
 LogicalType.prototype.getUnderlyingType = function () {
   return this._underlyingType;
@@ -1852,7 +1852,7 @@ function AbstractLongType(noUnpack) {
   LongType.call(this);
   this._noUnpack = !!noUnpack;
 }
-util.inherits(AbstractLongType, LongType);
+inherits(AbstractLongType, LongType);
 
 AbstractLongType.prototype._check = function (val, cb) {
   var b = this._isValid(val);

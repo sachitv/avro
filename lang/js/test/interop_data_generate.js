@@ -20,7 +20,7 @@
  */
 
 import * as files from '../lib/files.js';
-import fs from 'node:fs';
+import fs from 'fs';
 
 var datum = {
     'intField': 12,
@@ -53,12 +53,22 @@ outDir.split("/").reduce(function (fullPath, curDir) {
   return fullPath;
 }, "");
 
-for (var codec in files.streams.BlockEncoder.getDefaultCodecs()) {
-  var filePath = "../../build/interop/data/js";
-  if (codec !== "null") {
-    filePath += "_" + codec;
+async function main() {
+  var codecs = files.streams.BlockEncoder.getDefaultCodecs();
+  for (var codec in codecs) {
+    var filePath = "../../build/interop/data/js";
+    if (codec !== "null") {
+      filePath += "_" + codec;
+    }
+    filePath += ".avro";
+    var encoder = files.createFileEncoder(schema, {codec: codec});
+    encoder.end(datum);
+    var buffer = await encoder.collect();
+    fs.writeFileSync(filePath, buffer);
   }
-  filePath += ".avro";
-  var encoder = files.createFileEncoder(filePath, schema, {codec: codec});
-  encoder.end(datum);
 }
+
+main().catch(function (err) {
+  console.error(err);
+  process.exit(1);
+});

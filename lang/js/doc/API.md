@@ -620,39 +620,49 @@ Convenience class method to get the record's type.
 
 ## Files and streams
 
-*Not available in the browser.*
+These helpers work on in-memory Avro object container data, so they can be used
+in both Node.js and browser environments. Provide a `Buffer`, `Uint8Array`,
+`ArrayBuffer`, `Blob`, or stream and the runtime will take care of the rest.
 
-The following convenience functions are available for common operations on
-container files:
+#### `createFileDecoder(source, [opts])`
 
-#### `createFileDecoder(path, [opts])`
-
-+ `path` {String} Path to Avro container file.
-+ `opts` {Object} Decoding options, passed to
++ `source` {Buffer|Uint8Array|ArrayBuffer|Blob|stream.Readable|ReadableStream}
+  Container payload to decode.
++ `opts` {Object} Decoding options passed to
   [`BlockDecoder`](Api#class-blockdecoderopts).
 
-Returns a readable stream of decoded objects from an Avro container file.
+Returns a [`BlockDecoder`](#blockdecoderopts). When `source` is not already a
+stream, the payload is queued on the next microtask so consumers can attach
+event listeners before records start flowing.
 
-#### `createFileEncoder(path, schema, [opts])`
+#### `createFileEncoder(schema, [opts])`
 
-+ `path` {String} Destination path.
-+ `schem` {Object|String|Type} Type used to serialize.
-+ `opts` {Object} Encoding options, passed to
-  [`BlockEncoder`](Api#class-blockencoderschem-opts).
++ `schema` {Object|String|Type} Writer schema.
++ `opts` {Object} Encoding options passed to
+  [`BlockEncoder`](Api#class-blockencoderschem-opts), plus:
+  + `writable` {stream.Writable} Optional destination stream to pipe encoded
+    bytes into.
+  + `collect` {Boolean} Whether to buffer encoded output in memory when no
+    writable is supplied. Defaults to `true`.
+  + `blobType` {String} Default MIME type used by `encoder.toBlob()`.
 
-Returns a writable stream of objects. These will end up serialized into an Avro
-container file.
+Returns a [`BlockEncoder`](#blockencoderschem-opts). When collection is
+enabled, the encoder exposes the following helpers:
 
-#### `extractFileHeader(path, [opts])`
++ `encoder.collect()` ⇒ `Promise<Buffer>` resolving to the encoded container.
++ `encoder.toArrayBuffer()` ⇒ `Promise<ArrayBuffer>`.
++ `encoder.toBlob([type])` ⇒ `Promise<Blob>` (uses `opts.blobType` when `type`
+  is omitted).
 
-+ `path` {String} Path to Avro container file.
+#### `extractFileHeader(source, [opts])`
+
++ `source` {Buffer|Uint8Array|ArrayBuffer|Blob} Container payload to inspect.
 + `opts` {Object} Options:
   + `decode` {Boolean} Decode schema and codec metadata (otherwise they will be
     returned as bytes). Defaults to `true`.
 
-Extract header from an Avro container file synchronously. If no header is
-present (i.e. the path doesn't point to a valid Avro container file), `null` is
-returned.
+Returns a promise that resolves to the decoded header object, or `null` if the
+payload does not start with a valid Avro container.
 
 
 For more specific use-cases, the following stream classes are available in the

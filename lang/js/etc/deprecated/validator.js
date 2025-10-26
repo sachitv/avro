@@ -14,7 +14,7 @@
 // limitations under the License.
 
 import _ from 'underscore';
-import util from 'node:util';
+import util from 'util';
 
 const WARNING = 'Validator API is deprecated. Please use the type API instead.';
 Validator = util.deprecate(Validator, WARNING);

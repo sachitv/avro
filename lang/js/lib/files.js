@@ -21,11 +21,9 @@
 import * as protocols from './protocols.js';
 import * as schemas from './schemas.js';
 import * as utils from './utils.js';
-import fs from 'node:fs';
-import stream from 'node:stream';
-import util from 'node:util';
-import path from 'node:path';
-import zlib from 'node:zlib';
+import stream from 'stream';
+import { format, inherits } from './util.js';
+import { deflateRaw, inflateRaw } from './zlib.js';
 
 // Type of Avro header.
 var HEADER_TYPE = schemas.createType({
@@ -56,8 +54,62 @@ var LONG_TYPE = schemas.createType('long');
 var MAGIC_BYTES = Buffer.from('Obj\x01');
 
 // Convenience.
-var f = util.format;
+var f = format;
 var Tap = utils.Tap;
+
+function isReadableStream(val) {
+  return val && typeof val.pipe === 'function' && typeof val.on === 'function';
+}
+
+function isWebReadableStream(val) {
+  return val && typeof val.getReader === 'function';
+}
+
+function toNodeReadable(val) {
+  if (isReadableStream(val)) {
+    return val;
+  }
+  if (isWebReadableStream(val) && typeof stream.Readable.fromWeb === 'function') {
+    return stream.Readable.fromWeb(val);
+  }
+  return null;
+}
+
+function bufferFromView(view) {
+  return Buffer.from(view.buffer, view.byteOffset, view.byteLength);
+}
+
+function materializeBuffer(source) {
+  if (Buffer.isBuffer(source)) {
+    return Promise.resolve(source);
+  }
+  if (source instanceof Uint8Array) {
+    return Promise.resolve(bufferFromView(source));
+  }
+  if (ArrayBuffer.isView(source)) {
+    return Promise.resolve(bufferFromView(source));
+  }
+  if (source instanceof ArrayBuffer) {
+    return Promise.resolve(Buffer.from(source));
+  }
+  if (source && typeof source.arrayBuffer === 'function') {
+    return Promise.resolve(source.arrayBuffer()).then(function (ab) {
+      return Buffer.from(ab);
+    });
+  }
+  if (source && typeof source.then === 'function') {
+    return Promise.resolve(source).then(materializeBuffer);
+  }
+  return Promise.reject(new TypeError('unsupported data source'));
+}
+
+function defer(fn) {
+  if (typeof queueMicrotask === 'function') {
+    queueMicrotask(fn);
+  } else {
+    setTimeout(fn, 0);
+  }
+}
 
 
 /**
@@ -65,7 +117,7 @@ var Tap = utils.Tap;
  *
  */
 function parse(schema, opts) {
-  var attrs = loadSchema(schema);
+  var attrs = loadSchema(schema, opts);
   return attrs.protocol ?
     protocols.createProtocol(attrs, opts) :
     schemas.createType(attrs, opts);
@@ -98,7 +150,7 @@ function RawDecoder(schema, opts) {
     this._read();
   });
 }
-util.inherits(RawDecoder, stream.Duplex);
+inherits(RawDecoder, stream.Duplex);
 
 RawDecoder.prototype._write = function (chunk, encoding, cb) {
   var tap = this._tap;
@@ -161,12 +213,12 @@ function BlockDecoder(opts) {
     }
   });
 }
-util.inherits(BlockDecoder, stream.Duplex);
+inherits(BlockDecoder, stream.Duplex);
 
 BlockDecoder.getDefaultCodecs = function () {
   return {
     'null': function (buf, cb) { cb(null, buf); },
-    'deflate': zlib.inflateRaw
+    'deflate': inflateRaw
   };
 };
 
@@ -299,7 +351,7 @@ function RawEncoder(schema, opts) {
   };
   this._tap = new Tap(Buffer.alloc(opts.batchSize || 65536));
 }
-util.inherits(RawEncoder, stream.Transform);
+inherits(RawEncoder, stream.Transform);
 
 RawEncoder.prototype._transform = function (val, encoding, cb) {
   var tap = this._tap;
@@ -362,7 +414,7 @@ function BlockEncoder(schema, opts) {
     schema = undefined;
   } else {
     // Keep full schema to be able to write it to the header later.
-    obj = loadSchema(schema);
+    obj = loadSchema(schema, opts);
     type = schemas.createType(obj);
     schema = JSON.stringify(obj);
   }
@@ -397,12 +449,12 @@ function BlockEncoder(schema, opts) {
     }
   });
 }
-util.inherits(BlockEncoder, stream.Duplex);
+inherits(BlockEncoder, stream.Duplex);
 
 BlockEncoder.getDefaultCodecs = function () {
   return {
     'null': function (buf, cb) { cb(null, buf); },
-    'deflate': zlib.deflateRaw
+    'deflate': deflateRaw
   };
 };
 
@@ -502,50 +554,33 @@ BlockEncoder.prototype._createBlockCallback = function () {
 
 
 /**
- * Extract a container file's header synchronously.
+ * Extract a container file's header from an in-memory payload.
  *
  */
-function extractFileHeader(path, opts) {
+async function extractFileHeader(source, opts) {
   opts = opts || {};
 
   var decode = opts.decode === undefined ? true : !!opts.decode;
-  var size = Math.max(opts.size || 4096, 4);
-  var fd = fs.openSync(path, 'r');
-  var buf = Buffer.alloc(size);
-  var pos = 0;
+  var buf = await materializeBuffer(source);
+  if (buf.length < 4 || !MAGIC_BYTES.equals(buf.slice(0, 4))) {
+    return null;
+  }
+
   var tap = new Tap(buf);
-  var header = null;
-
-  while (pos < 4) {
-    // Make sure we have enough to check the magic bytes.
-    pos += fs.readSync(fd, buf, pos, size - pos);
+  var header = HEADER_TYPE._read(tap);
+  if (!tap.isValid()) {
+    return null;
   }
-  if (MAGIC_BYTES.equals(buf.slice(0, 4))) {
-    do {
-      header = HEADER_TYPE._read(tap);
-    } while (!isValid());
-    if (decode !== false) {
-      var meta = header.meta;
-      meta['avro.schema'] = JSON.parse(meta['avro.schema'].toString());
-      if (meta['avro.codec'] !== undefined) {
-        meta['avro.codec'] = meta['avro.codec'].toString();
-      }
+
+  if (decode !== false) {
+    var meta = header.meta;
+    meta['avro.schema'] = JSON.parse(meta['avro.schema'].toString());
+    if (meta['avro.codec'] !== undefined) {
+      meta['avro.codec'] = meta['avro.codec'].toString();
     }
   }
-  fs.closeSync(fd);
+
   return header;
-
-  function isValid() {
-    if (tap.isValid()) {
-      return true;
-    }
-    var len = 2 * tap.buf.length;
-    var buf = Buffer.alloc(len);
-    len = fs.readSync(fd, buf, 0, len);
-    tap.buf = Buffer.concat([tap.buf, buf]);
-    tap.pos = 0;
-    return false;
-  }
 }
 
 
@@ -553,18 +588,46 @@ function extractFileHeader(path, opts) {
  * Readable stream of records from a local Avro file.
  *
  */
-function createFileDecoder(path, opts) {
-  return fs.createReadStream(path).pipe(new BlockDecoder(opts));
+function createFileDecoder(source, opts) {
+  var readable = toNodeReadable(source);
+  if (readable) {
+    return readable.pipe(new BlockDecoder(opts));
+  }
+
+  var decoder = new BlockDecoder(opts);
+  Promise.resolve().then(function () {
+    return materializeBuffer(source);
+  }).then(function (buf) {
+    decoder.end(buf);
+  }, function (err) {
+    defer(function () {
+      decoder.emit('error', err);
+    });
+  });
+  return decoder;
 }
 
 
 /**
- * Writable stream of records to a local Avro file.
+ * Writable stream of records to an in-memory buffer.
  *
+ * Returns a `BlockEncoder`. Call `encoder.collect()` (or `encoder.toArrayBuffer()`/
+ * `encoder.toBlob()`) once the stream has finished to retrieve the encoded
+ * container as a `Buffer`, `ArrayBuffer`, or `Blob` respectively. Pass a
+ * `writable` option to pipe the encoded data elsewhere.
  */
-function createFileEncoder(path, schema, opts) {
+function createFileEncoder(schema, opts) {
+  opts = opts || {};
   var encoder = new BlockEncoder(schema, opts);
-  encoder._downstream = encoder.pipe(fs.createWriteStream(path, {defaultEncoding: 'binary'}));
+
+  if (opts.writable) {
+    encoder.pipe(opts.writable);
+  }
+
+  if (opts.collect !== false && !opts.writable) {
+    attachCollector(encoder, opts);
+  }
+
   return encoder;
 }
 
@@ -629,24 +692,77 @@ function copyBuffer(buf, pos, len) {
   return copy;
 }
 
+function bufferToArrayBuffer(buf) {
+  return buf.buffer.slice(buf.byteOffset, buf.byteOffset + buf.byteLength);
+}
+
+function attachCollector(encoder, opts) {
+  var chunks = [];
+  var resolved = false;
+  var onData = function (chunk) {
+    chunks.push(Buffer.isBuffer(chunk) ? chunk : Buffer.from(chunk));
+  };
+  var resolveBuffer;
+  var rejectBuffer;
+  var bufferPromise = new Promise(function (resolve, reject) {
+    resolveBuffer = resolve;
+    rejectBuffer = reject;
+  });
+
+  encoder.on('data', onData);
+  encoder.once('end', function () {
+    if (resolved) {
+      return;
+    }
+    resolved = true;
+    encoder.removeListener('data', onData);
+    resolveBuffer(Buffer.concat(chunks));
+  });
+  encoder.once('error', function (err) {
+    if (resolved) {
+      return;
+    }
+    resolved = true;
+    encoder.removeListener('data', onData);
+    rejectBuffer(err);
+  });
+
+  encoder.collect = function () {
+    return bufferPromise;
+  };
+
+  encoder.toArrayBuffer = function () {
+    return bufferPromise.then(bufferToArrayBuffer);
+  };
+
+  encoder.toBlob = function (type) {
+    if (typeof Blob === 'undefined') {
+      throw new Error('Blob constructor is not available in this environment');
+    }
+    var blobType = type || opts.blobType;
+    return bufferPromise.then(function (buffer) {
+      return new Blob([buffer], blobType ? {type: blobType} : undefined);
+    });
+  };
+}
+
 /**
  * Try to load a schema.
  *
- * This method will attempt to load schemas from a file if the schema passed is
- * a string which isn't valid JSON and contains at least one slash.
- *
+ * String inputs are parsed as JSON when possible; otherwise an optional
+ * `schemaResolver` hook can return the associated schema definition.
  */
-function loadSchema(schema) {
+function loadSchema(schema, opts) {
   var obj;
   if (typeof schema == 'string') {
     try {
       obj = JSON.parse(schema);
     } catch (err) {
-      if (~schema.indexOf(path.sep)) {
-        // This can't be a valid name, so we interpret is as a filepath. This
-        // makes is always feasible to read a file, independent of its name
-        // (i.e. even if its name is valid JSON), by prefixing it with `./`.
-        obj = JSON.parse(fs.readFileSync(schema));
+      if (opts && typeof opts.schemaResolver === 'function') {
+        obj = opts.schemaResolver(schema);
+        if (typeof obj == 'string') {
+          obj = JSON.parse(obj);
+        }
       }
     }
   }

@@ -21,9 +21,9 @@
 
 import * as protocols from '../lib/protocols.js';
 import * as utils from '../lib/utils.js';
-import assert from 'node:assert';
-import stream from 'node:stream';
-import util from 'node:util';
+import assert from 'assert';
+import stream from 'stream';
+import util from 'util';
 
 
 var HANDSHAKE_REQUEST_TYPE = protocols.HANDSHAKE_REQUEST_TYPE;

@@ -22,11 +22,10 @@
 import * as files from '../lib/files.js';
 import * as protocols from '../lib/protocols.js';
 import * as schemas from '../lib/schemas.js';
-import assert from 'node:assert';
-import fs from 'node:fs';
-import path from 'node:path';
-import tmp from 'tmp';
-import { fileURLToPath } from 'node:url';
+import assert from 'assert';
+import fs from 'fs';
+import path from 'path';
+import { fileURLToPath } from 'url';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
@@ -78,7 +77,9 @@ describe('files', function () {
 
     it('file', function () {
       var t1 = parse({type: 'fixed', name: 'id.Id', size: 64});
-      var t2 = parse(path.join(__dirname, 'dat', 'Id.avsc'));
+      var schemaPath = path.join(__dirname, 'dat', 'Id.avsc');
+      var schemaText = fs.readFileSync(schemaPath, 'utf8');
+      var t2 = parse(schemaText);
       assert.deepEqual(JSON.stringify(t1), JSON.stringify(t2));
     });
 
@@ -537,7 +538,8 @@ describe('files', function () {
   it('createFileDecoder', function (cb) {
     var n = 0;
     var type = loadSchema(path.join(DPATH, 'Person.avsc'));
-    files.createFileDecoder(path.join(DPATH, 'person-10.avro'))
+    var fileBuffer = fs.readFileSync(path.join(DPATH, 'person-10.avro'));
+    files.createFileDecoder(fileBuffer)
       .on('metadata', function (writerType) {
         assert.equal(writerType.toString(), type.toString());
       })
@@ -548,10 +550,11 @@ describe('files', function () {
       .on('end', function () {
         assert.equal(n, 10);
         cb();
-      });
+      })
+      .on('error', cb);
   });
 
-  it('createFileEncoder', function (cb) {
+  it('createFileEncoder', async function () {
     var type = createType({
       type: 'record',
       name: 'Person',
@@ -560,39 +563,45 @@ describe('files', function () {
         {name: 'age', type: 'int'}
       ]
     });
-    var path = tmp.fileSync().name;
-    var encoder = files.createFileEncoder(path, type);
+    var encoder = files.createFileEncoder(type);
     encoder.write({name: 'Ann', age: 32});
     encoder.end({name: 'Bob', age: 33});
+    var buffer = await encoder.collect();
+
     var n = 0;
-    encoder.getDownstream().on('finish', function () {
-      files.createFileDecoder(path)
+    await new Promise(function (resolve, reject) {
+      files.createFileDecoder(buffer)
         .on('data', function (obj) {
           n++;
           assert(type.isValid(obj));
         })
         .on('end', function () {
           assert.equal(n, 2);
-          cb();
-        });
+          resolve();
+        })
+        .on('error', reject);
     });
   });
 
-  it('extractFileHeader', function () {
-    var header;
+  it('extractFileHeader', async function () {
     var fpath = path.join(DPATH, 'person-10.avro');
-    header = files.extractFileHeader(fpath);
+    var buffer = fs.readFileSync(fpath);
+    var header = await files.extractFileHeader(buffer);
     assert(header !== null);
     assert.equal(typeof header.meta['avro.schema'], 'object');
-    header = files.extractFileHeader(fpath, {decode: false});
+
+    header = await files.extractFileHeader(buffer, {decode: false});
     assert(Buffer.isBuffer(header.meta['avro.schema']));
-    header = files.extractFileHeader(fpath, {size: 2});
+
+    header = await files.extractFileHeader(buffer, {size: 2});
     assert.equal(typeof header.meta['avro.schema'], 'object');
-    header = files.extractFileHeader(path.join(DPATH, 'person-10.avro.raw'));
+
+    var rawBuffer = fs.readFileSync(path.join(DPATH, 'person-10.avro.raw'));
+    header = await files.extractFileHeader(rawBuffer);
     assert(header === null);
-    header = files.extractFileHeader(
-      path.join(DPATH, 'person-10.no-codec.avro')
-    );
+
+    var noCodecBuffer = fs.readFileSync(path.join(DPATH, 'person-10.no-codec.avro'));
+    header = await files.extractFileHeader(noCodecBuffer);
     assert(header !== null);
   });
 

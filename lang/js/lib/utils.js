@@ -19,7 +19,7 @@
  *
  */
 
-import crypto from 'node:crypto';
+import { hashString } from './hash.js';
 
 
 /**
@@ -47,10 +47,7 @@ function compare(n1, n2) { return n1 === n2 ? 0 : (n1 < n2 ? -1 : 1); }
  *
  */
 function getHash(str, algorithm) {
-  algorithm = algorithm || 'md5';
-  var hash = crypto.createHash(algorithm);
-  hash.end(str);
-  return hash.read();
+  return hashString(str, algorithm);
 }
 
 /**

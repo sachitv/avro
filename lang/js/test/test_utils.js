@@ -19,7 +19,7 @@
  */
 
 import * as utils from '../lib/utils.js';
-import assert from 'node:assert';
+import assert from 'assert';
 
 
 describe('utils', function () {

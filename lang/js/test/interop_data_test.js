@@ -20,15 +20,16 @@
  */
 
 import * as files from '../lib/files.js';
-import assert from 'node:assert';
-import fs from 'node:fs';
-import path from 'node:path';
+import assert from 'assert';
+import fs from 'fs';
+import path from 'path';
 
 describe('interop', function() {
 
-  it('interop', function() {
+  it('interop', async function() {
     var codecs = files.streams.BlockDecoder.getDefaultCodecs();
     var dir = "../../build/interop/data";
+    var tasks = [];
     fs.readdirSync(dir).forEach(function (file) {
       var base = file.substr(0, file.lastIndexOf(".avro"));
       var pos = base.lastIndexOf("_");
@@ -41,18 +42,24 @@ describe('interop', function() {
       // As a workaround, we skip these languages to avoid random test failure.
       if (!base.startsWith("java") && !base.startsWith("ruby") && codec in codecs) {
         console.log("Reading " + file);
-        var n = 0;
-        files.createFileDecoder(path.join(dir, file))
-          .on("data", function () {
-            n++;
-          })
-          .on("end", function () {
-            assert(n > 0);
-          });
-      }
-      else {
+        var buffer = fs.readFileSync(path.join(dir, file));
+        tasks.push(new Promise(function (resolve, reject) {
+          var n = 0;
+          files.createFileDecoder(buffer)
+            .on("data", function () {
+              n++;
+            })
+            .on("end", function () {
+              assert(n > 0);
+              resolve();
+            })
+            .on('error', reject);
+        }));
+      } else {
         console.log("Skipped: " + file);
       }
     });
+
+    await Promise.all(tasks);
   });
 });

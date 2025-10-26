@@ -164,18 +164,24 @@ listening to the `'metadata'` event:
 personStream.on('metadata', function (type, codec) { /* Something useful. */ });
 ```
 
-To access a file's header synchronously, there also exists an
-[`extractFileHeader`](API.md#extractfileheaderpath-opts) method:
+To inspect a file's header without touching the filesystem, use
+[`extractFileHeader`](API.md#extractfileheadersource-opts). The helper accepts a
+`Buffer`, `ArrayBuffer`, or `Blob` and returns a promise:
 
 ```javascript
-var header = avro.extractFileHeader('persons.avro');
+const buffer = fs.readFileSync('persons.avro');
+const header = await avro.extractFileHeader(buffer);
 ```
 
-Writing to an Avro container file is possible using
-[`createFileEncoder`](API.md#createfileencoderpath-type-opts):
+Writing to an Avro container can be done in-memory with
+[`createFileEncoder`](API.md#createfileencoderschema-opts):
 
 ```javascript
-var encoder = avro.createFileEncoder('./processed.avro', type);
+const encoder = avro.createFileEncoder(type, {codec: 'deflate'});
+encoder.write(processedRecord);
+encoder.end();
+const buffer = await encoder.collect();
+fs.writeFileSync('./processed.avro', buffer);
 ```
 
 

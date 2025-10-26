@@ -20,8 +20,8 @@
 
 import * as utils from '../lib/utils.js';
 import * as schemas from '../lib/schemas.js';
-import assert from 'node:assert';
-import util from 'node:util';
+import assert from 'assert';
+import util from 'util';
 
 var Tap = utils.Tap;
 var createType = schemas.createType;

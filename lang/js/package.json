@@ -37,8 +37,13 @@
     "./etc/deprecated/*": "./etc/deprecated/*.js"
   },
   "browser": {
-    "./lib": "./etc/browser/avro.js",
-    "crypto": "./etc/browser/crypto.js"
+    "./lib": "./lib/index.js",
+    "crypto": "./etc/browser/crypto.js",
+    "path": "./etc/browser/path.js",
+    "buffer": "./etc/browser/buffer.js",
+    "./lib/hash.js": "./etc/browser/hash.js",
+    "stream": "stream-browserify",
+    "./lib/zlib.js": "./etc/browser/zlib.js"
   },
   "scripts": {
     "cover": "nyc npm run test",
@@ -49,6 +54,8 @@
     "interop-data-test": "mocha test/interop_data_test.js"
   },
   "dependencies": {
+    "pako": "^2.1.0",
+    "stream-browserify": "^3.0.0",
     "underscore": "^1.13.2"
   },
   "devDependencies": {

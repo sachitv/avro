@@ -28,9 +28,9 @@
 
 import * as schemas from './schemas.js';
 import * as utils from './utils.js';
-import events from 'node:events';
-import stream from 'node:stream';
-import util from 'node:util';
+import stream from 'stream';
+import { format, inherits } from './util.js';
+import EventEmitter from './emitter.js';
 
 
 var BOOLEAN_TYPE = schemas.createType('boolean');
@@ -83,7 +83,7 @@ var HANDSHAKE_RESPONSE_TYPE = schemas.createType({
 var HandshakeRequest = HANDSHAKE_REQUEST_TYPE.getRecordConstructor();
 var HandshakeResponse = HANDSHAKE_RESPONSE_TYPE.getRecordConstructor();
 var Tap = utils.Tap;
-var f = util.format;
+var f = format;
 
 
 /**
@@ -269,7 +269,7 @@ Protocol.prototype.inspect = function () {
  *
  */
 function MessageEmitter(ptcl, opts) {
-  events.EventEmitter.call(this);
+  EventEmitter.call(this);
 
   this._ptcl = ptcl;
   this._resolvers = ptcl._emitterResolvers;
@@ -280,7 +280,7 @@ function MessageEmitter(ptcl, opts) {
 
   this.once('_eot', function (pending) { this.emit('eot', pending); });
 }
-util.inherits(MessageEmitter, events.EventEmitter);
+inherits(MessageEmitter, EventEmitter);
 
 MessageEmitter.prototype._generateResolvers = function (
   hashString, serverPtcl
@@ -392,7 +392,7 @@ function StatelessEmitter(ptcl, writableFactory, opts) {
   this._destroyed = false;
   this._interrupted = false;
 }
-util.inherits(StatelessEmitter, MessageEmitter);
+inherits(StatelessEmitter, MessageEmitter);
 
 StatelessEmitter.prototype._emit = function (message, req, cb) {
   // We enclose the server's hash inside this message's closure since the
@@ -603,7 +603,7 @@ function StatefulEmitter(ptcl, readable, writable, opts) {
     }
   }
 }
-util.inherits(StatefulEmitter, MessageEmitter);
+inherits(StatefulEmitter, MessageEmitter);
 
 StatefulEmitter.prototype._emit = function (message, req, cb) {
   if (this._destroyed) {
@@ -661,7 +661,7 @@ StatefulEmitter.prototype.destroy = function (noWait) {
  *
  */
 function MessageListener(ptcl, opts) {
-  events.EventEmitter.call(this);
+  EventEmitter.call(this);
   opts = opts || {};
 
   this._ptcl = ptcl;
@@ -677,7 +677,7 @@ function MessageListener(ptcl, opts) {
 
   this.once('_eot', function (pending) { this.emit('eot', pending); });
 }
-util.inherits(MessageListener, events.EventEmitter);
+inherits(MessageListener, EventEmitter);
 
 MessageListener.prototype._generateResolvers = function (
   hashString, emitterPtcl
@@ -862,7 +862,7 @@ function StatelessListener(ptcl, readableFactory, opts) {
 
   function onEnd() { self.destroy(); }
 }
-util.inherits(StatelessListener, MessageListener);
+inherits(StatelessListener, MessageListener);
 
 /**
  * Stateful transport listener.
@@ -952,7 +952,7 @@ function StatefulListener(ptcl, readable, writable, opts) {
     }
   }
 }
-util.inherits(StatefulListener, MessageListener);
+inherits(StatefulListener, MessageListener);
 
 // Helpers.
 
@@ -1015,7 +1015,7 @@ function MessageEncoder(frameSize) {
     throw new Error('invalid frame size');
   }
 }
-util.inherits(MessageEncoder, stream.Transform);
+inherits(MessageEncoder, stream.Transform);
 
 MessageEncoder.prototype._transform = function (buf, encoding, cb) {
   var frames = [];
@@ -1066,7 +1066,7 @@ function MessageDecoder(noEmpty) {
       }
     });
 }
-util.inherits(MessageDecoder, stream.Transform);
+inherits(MessageDecoder, stream.Transform);
 
 MessageDecoder.prototype._transform = function (buf, encoding, cb) {
   buf = Buffer.concat([this._buf, buf]);
@@ -1113,7 +1113,7 @@ MessageDecoder.prototype._flush = function () {
 function IdType(attrs, opts) {
   schemas.types.LogicalType.call(this, attrs, opts);
 }
-util.inherits(IdType, schemas.types.LogicalType);
+inherits(IdType, schemas.types.LogicalType);
 
 IdType.prototype._fromValue = function (val) {
   var buf = val.id;
