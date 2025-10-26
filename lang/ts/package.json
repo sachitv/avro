@@ -1,0 +1,22 @@
+{
+  "name": "@apache/avro-ts",
+  "version": "0.0.0",
+  "description": "Experimental TypeScript bindings for Apache Avro.",
+  "license": "Apache-2.0",
+  "type": "module",
+  "scripts": {
+    "build": "bun run tsc --pretty",
+    "lint": "bun run tsc --pretty --noEmit",
+    "test": "bun run lint && bun test",
+    "bundle:web": "bun build src/index.ts --entry-naming=[dir]/[name].js --outdir dist/web --target browser"
+  },
+  "module": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "dependencies": {
+    "crypto-js": "^4.2.0"
+  },
+  "devDependencies": {
+    "@types/crypto-js": "^4.2.1",
+    "typescript": "~5.6.3"
+  }
+}
