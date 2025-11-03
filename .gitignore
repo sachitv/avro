@@ -25,6 +25,7 @@ test-output
 .python-version
 .java-version
 .coverage
+coverage/
 vendor
 composer.lock
 .phpunit.result.cache
